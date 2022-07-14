@@ -91,6 +91,20 @@ pub fn generateEd25519Key() -> Result<String, JsValue> {
     map_jsvalue(generate_ed25519_key())
 }
 
+#[cfg(feature = "generate")]
+fn generate_ed25519_key_from_bytes(bytes: &[u8]) -> Result<String, Error> {
+    let jwk = JWK::generate_ed25519_from_bytes(bytes)?;
+    let jwk_json = serde_json::to_string(&jwk)?;
+    Ok(jwk_json)
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+#[cfg(feature = "generate")]
+pub fn generateEd25519KeyFromBytes(bytes: &[u8]) -> Result<String, JsValue> {
+    map_jsvalue(generate_ed25519_key_from_bytes(bytes))
+}
+
 fn key_to_did(method_pattern: String, jwk: String) -> Result<String, Error> {
     let key: JWK = serde_json::from_str(&jwk)?;
     let did = DID_METHODS
