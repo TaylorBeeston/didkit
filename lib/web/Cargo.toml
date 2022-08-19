@@ -9,7 +9,7 @@ wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 serde_json = "1.0"
 js-sys = "0.3"
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.2.7", features = ["js"] }
 rand = { version = "0.7", features = ["wasm-bindgen"] }
 chrono = { version = "0.4", features = ["wasmbind"] }
 
@@ -22,7 +22,7 @@ features = ["wasm"]
 [dependencies.ssi]
 path = "../../../ssi"
 default-features = false
-features = ["ed25519-dalek", "sha2", "rsa", "rand", "libsecp256k1", "p256"]
+features = ["ed25519-dalek", "sha2", "rsa", "rand", "secp256k1", "p256"]
 
 [dependencies.did-method-key]
 path = "../../../ssi/did-key"
@@ -36,6 +36,10 @@ features = ["secp256k1", "dalek", "p256"]
 
 [dependencies.did-webkey]
 path = "../../../ssi/did-webkey"
+default-features = false
+
+[dependencies.did-ethr]
+path = "../../../ssi/did-ethr"
 default-features = false
 
 [dev-dependencies]
