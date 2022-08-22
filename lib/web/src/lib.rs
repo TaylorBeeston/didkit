@@ -1,9 +1,14 @@
 use core::future::Future;
 
+use iref::*;
+
 use js_sys::Promise;
 use serde_json::Value;
+use ssi::jsonld::RemoteDocument;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
+
+use ssi::jsonld::Loader;
 
 use didkit::error::Error;
 #[cfg(doc)]
@@ -839,4 +844,22 @@ async fn verify_invocation(invocation: String, delegation: String) -> Result<Str
 #[cfg(any(feature = "invoke", feature = "zcap"))]
 pub fn verifyInvocation(invocation: String, delegation: String) -> Promise {
     map_async_jsvalue(verify_invocation(invocation, delegation))
+}
+
+async fn context_loader(url: String) -> Result<String, Error> {
+    let mut context_loader = ssi::jsonld::ContextLoader::default();
+
+    let iri = Iri::new(&url).unwrap_throw();
+
+    let context = context_loader.load(iri).await.unwrap_throw();
+
+    let json = context.dump();
+
+    Ok(json)
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn contextLoader(url: String) -> Promise {
+    map_async_jsvalue(context_loader(url))
 }
