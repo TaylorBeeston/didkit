@@ -19,20 +19,31 @@ include = [
 ]
 
 [features]
-default = ["ring", "secp256k1", "p256"]
-ring = ["ssi/ring"]
-no-ring = ["ssi/ed25519-dalek", "ssi/sha2", "ssi/rsa", "ssi/rand"]
-wasm = []
+default = ["w3c", "ed25519", "rsa", "ripemd-160", "eip", "tezos"]
+
+w3c = ["ssi/w3c"]
+secp256k1 = ["ssi/secp256k1"]
+secp256r1 = ["ssi/secp256r1"]
+secp384r1 = ["ssi/secp384r1"]
+ed25519 = ["ssi/ed25519"]
+rsa = ["ssi/rsa"]
+ripemd-160 = ["ssi/ripemd-160"]
+
+aleo = ["ssi/aleo"]
+eip = ["ssi/eip"]
+tezos = ["ssi/tezos"]
+solana = ["ssi/solana"]
+
 http-did = ["ssi/http-did"]
-secp256k1 = ["ssi/libsecp256k1", "did-tz/secp256k1", "did-method-key/secp256k1"]
-p256 = ["ssi/secp256r1", "did-tz/p256", "did-webkey/p256", "did-method-key/secp256r1"]
+
+ring = ["ssi/ring"]
 
 [dependencies]
 ssi = { version = "0.4", path = "../../ssi", default-features = false }
 did-method-key = { version = "^0.1.2", path = "../../ssi/did-key", default-features = false }
-did-tz = { version = "^0.1.1", path = "../../ssi/did-tezos", default-features = false }
+did-tz = { version = "^0.1.1", path = "../../ssi/did-tezos" }
 did-ethr = { version = "0.1", path = "../../ssi/did-ethr", default-features = false }
-did-pkh = { version = "0.1", path = "../../ssi/did-pkh", default-features = false }
+did-pkh = { version = "0.1", path = "../../ssi/did-pkh", default-features = true }
 #did-sol = { version = "0.0.1", path = "../../ssi/did-sol" }
 did-web = { version = "^0.1.1", path = "../../ssi/did-web", default-features = false }
 did-webkey = { version = "0.1", path = "../../ssi/did-webkey", default-features = false }

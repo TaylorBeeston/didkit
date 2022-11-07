@@ -11,18 +11,19 @@ use serde::Serialize;
 use serde_json::Value;
 use sshkeys::PublicKey;
 
-use did_method_key::DIDKey;
-use didkit::generate_proof;
 use didkit::{
-    dereference, get_verification_method, runtime, DIDCreate, DIDDeactivate, DIDDocumentOperation,
-    DIDMethod, DIDRecover, DIDResolver, DIDUpdate, DereferencingInputMetadata, Error,
-    LinkedDataProofOptions, Metadata, ProofFormat, ProofPurpose, ResolutionInputMetadata,
-    ResolutionResult, Source, VerifiableCredential, VerifiablePresentation, DIDURL, DID_METHODS,
-    JWK, URI,
+    dereference, generate_proof, get_verification_method, runtime,
+    ssi::{
+        self,
+        did::{DIDMethodTransaction, Service, ServiceEndpoint},
+        one_or_many::OneOrMany,
+    },
+    DIDCreate, DIDDeactivate, DIDDocumentOperation, DIDMethod, DIDRecover, DIDResolver, DIDUpdate,
+    DereferencingInputMetadata, Error, LinkedDataProofOptions, Metadata, ProofFormat,
+    ResolutionInputMetadata, ResolutionResult, Source, VerifiableCredential,
+    VerifiablePresentation, VerificationRelationship, DIDURL, DID_METHODS, JWK, URI,
 };
 use didkit_cli::opts::ResolverOptions;
-use ssi::did::{DIDMethodTransaction, Service, ServiceEndpoint, VerificationRelationship};
-use ssi::one_or_many::OneOrMany;
 
 #[derive(StructOpt, Debug)]
 pub enum DIDKit {
@@ -415,7 +416,7 @@ pub struct ProofOptions {
     #[clap(env, short, long)]
     pub verification_method: Option<URI>,
     #[clap(env, short, long)]
-    pub proof_purpose: Option<ProofPurpose>,
+    pub proof_purpose: Option<VerificationRelationship>,
     #[clap(env, short, long)]
     pub created: Option<DateTime<Utc>>,
     #[clap(env, short = 'C', long)]
@@ -747,8 +748,8 @@ fn main() -> AResult<()> {
             // Deprecated in favor of KeyToDID
             eprintln!("didkit: use key-to-did instead of key-to-did-key");
             let jwk = key.get_jwk();
-            let did = DIDKey
-                .generate(&Source::Key(&jwk))
+            let did = DID_METHODS
+                .generate(&Source::KeyAndPattern(&jwk, "key"))
                 .ok_or(Error::UnableToGenerateDID)
                 .unwrap();
             println!("{}", did);
