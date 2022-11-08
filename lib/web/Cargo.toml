@@ -24,10 +24,6 @@ features = ["ed25519", "rsa", "ripemd-160", "eip", "tezos"]
 path = "../../../ssi/did-ethr"
 default-features = false
 
-[dependencies.did-ethr]
-path = "../../../ssi/did-ethr"
-default-features = false
-
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
 
