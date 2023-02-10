@@ -170,6 +170,20 @@ pub fn keyToVerificationMethod(method_pattern: String, jwk: String) -> Promise {
     map_async_jsvalue(key_to_verification_method(method_pattern, jwk))
 }
 
+async fn did_to_verification_method(did: String) -> Result<String, Error> {
+    let did_resolver = DID_METHODS.to_resolver();
+    let vm = get_verification_method(&did, did_resolver)
+        .await
+        .ok_or(Error::UnableToGetVerificationMethod)?;
+    Ok(vm)
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn didToVerificationMethod(did: String) -> Promise {
+    map_async_jsvalue(did_to_verification_method(did))
+}
+
 #[cfg(any(
     all(feature = "issue", feature = "credential"),
     all(feature = "issue", not(feature = "presentation")),
