@@ -1,10 +1,10 @@
 use core::future::Future;
 
+use didkit::ResolutionResult;
 use iref::*;
 
 use js_sys::Promise;
 use serde_json::Value;
-use ssi::jsonld::RemoteDocument;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 
@@ -49,6 +49,36 @@ fn map_async_jsvalue<E: std::error::Error>(
 #[allow(non_snake_case)]
 pub fn getVersion() -> String {
     VERSION.into()
+}
+
+async fn did_resolver(did: String, input_metadata: String) -> Result<String, String> {
+    let (did_resolution_metadata, did_document, did_document_metadata) = DID_METHODS
+        .to_resolver()
+        .resolve(
+            &did,
+            &serde_json::from_str(&input_metadata).or_else(|e| Err(e.to_string()))?,
+        )
+        .await;
+
+    let resolution_result = ResolutionResult {
+        did_document,
+        did_resolution_metadata: Some(did_resolution_metadata),
+        did_document_metadata,
+        ..Default::default()
+    };
+
+    Ok(serde_json::to_string(&resolution_result).or_else(|e| Err(e.to_string()))?)
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn didResolver(did: String, input_metadata: String) -> Promise {
+    future_to_promise(async {
+        match did_resolver(did, input_metadata).await {
+            Ok(string) => Ok(string.into()),
+            Err(err) => Err(err.into()),
+        }
+    })
 }
 
 async fn resolve_did(did: String, input_metadata: String) -> Result<String, String> {
