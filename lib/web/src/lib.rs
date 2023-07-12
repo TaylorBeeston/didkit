@@ -2,13 +2,12 @@ use core::future::Future;
 
 use didkit::ResolutionResult;
 use iref::*;
-
 use js_sys::Promise;
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 
-use ssi::jsonld::Loader;
+use ssi::jsonld::{syntax::Print, Loader};
 
 use didkit::error::Error;
 #[cfg(doc)]
@@ -909,11 +908,11 @@ pub fn verifyInvocation(invocation: String, delegation: String) -> Promise {
 async fn context_loader(url: String) -> Result<String, Error> {
     let mut context_loader = ssi::jsonld::ContextLoader::default();
 
-    let iri = Iri::new(&url).unwrap_throw();
+    let iri = IriBuf::new(&url).unwrap_throw();
 
     let context = context_loader.load(iri).await.unwrap_throw();
 
-    let json = context.dump();
+    let json = context.document().compact_print().to_string();
 
     Ok(json)
 }
