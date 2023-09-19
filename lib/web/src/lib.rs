@@ -1,4 +1,5 @@
 use core::future::Future;
+use std::collections::HashMap;
 
 use didkit::ResolutionResult;
 use iref::*;
@@ -226,13 +227,17 @@ async fn issue_credential(
     credential: String,
     proof_options: String,
     key: String,
+    context_map: String,
 ) -> Result<String, Error> {
     let mut credential = VerifiableCredential::from_json_unsigned(&credential)?;
     let key: JWK = serde_json::from_str(&key)?;
     let options: JWTOrLDPOptions = serde_json::from_str(&proof_options)?;
+    let context_map: HashMap<String, String> = serde_json::from_str(&context_map)?;
     let proof_format = options.proof_format.unwrap_or_default();
     let resolver = DID_METHODS.to_resolver();
-    let mut context_loader = ssi::jsonld::ContextLoader::default();
+    let mut context_loader = ssi::jsonld::ContextLoader::default()
+        .with_context_map_from(context_map)
+        .unwrap();
     let vc_string = match proof_format {
         ProofFormat::JWT => {
             let vc_jwt = credential
@@ -264,8 +269,18 @@ async fn issue_credential(
         not(feature = "verify")
     )
 ))]
-pub fn issueCredential(credential: String, proof_options: String, key: String) -> Promise {
-    map_async_jsvalue(issue_credential(credential, proof_options, key))
+pub fn issueCredential(
+    credential: String,
+    proof_options: String,
+    key: String,
+    context_map: String,
+) -> Promise {
+    map_async_jsvalue(issue_credential(
+        credential,
+        proof_options,
+        key,
+        context_map,
+    ))
 }
 
 async fn prepare_issue_credential(
@@ -341,11 +356,18 @@ pub fn completeIssueCredential(
         not(feature = "verify")
     )
 ))]
-async fn verify_credential(vc_string: String, proof_options: String) -> Result<String, Error> {
+async fn verify_credential(
+    vc_string: String,
+    proof_options: String,
+    context_map: String,
+) -> Result<String, Error> {
     let options: JWTOrLDPOptions = serde_json::from_str(&proof_options)?;
+    let context_map: HashMap<String, String> = serde_json::from_str(&context_map)?;
     let proof_format = options.proof_format.unwrap_or_default();
     let resolver = DID_METHODS.to_resolver();
-    let mut context_loader = ssi::jsonld::ContextLoader::default();
+    let mut context_loader = ssi::jsonld::ContextLoader::default()
+        .with_context_map_from(context_map)
+        .unwrap();
     let result = match proof_format {
         ProofFormat::JWT => {
             VerifiableCredential::verify_jwt(
@@ -378,8 +400,8 @@ async fn verify_credential(vc_string: String, proof_options: String) -> Result<S
         not(feature = "verify")
     )
 ))]
-pub fn verifyCredential(vc: String, proof_options: String) -> Promise {
-    map_async_jsvalue(verify_credential(vc, proof_options))
+pub fn verifyCredential(vc: String, proof_options: String, context_map: String) -> Promise {
+    map_async_jsvalue(verify_credential(vc, proof_options, context_map))
 }
 
 #[cfg(any(
@@ -395,13 +417,17 @@ async fn issue_presentation(
     presentation: String,
     proof_options: String,
     key: String,
+    context_map: String,
 ) -> Result<String, Error> {
     let mut presentation = VerifiablePresentation::from_json_unsigned(&presentation)?;
     let key: JWK = serde_json::from_str(&key)?;
     let options: JWTOrLDPOptions = serde_json::from_str(&proof_options)?;
+    let context_map: HashMap<String, String> = serde_json::from_str(&context_map)?;
     let proof_format = options.proof_format.unwrap_or_default();
     let resolver = DID_METHODS.to_resolver();
-    let mut context_loader = ssi::jsonld::ContextLoader::default();
+    let mut context_loader = ssi::jsonld::ContextLoader::default()
+        .with_context_map_from(context_map)
+        .unwrap();
     let vp_string = match proof_format {
         ProofFormat::JWT => {
             presentation
@@ -431,8 +457,18 @@ async fn issue_presentation(
         not(feature = "verify")
     )
 ))]
-pub fn issuePresentation(presentation: String, proof_options: String, key: String) -> Promise {
-    map_async_jsvalue(issue_presentation(presentation, proof_options, key))
+pub fn issuePresentation(
+    presentation: String,
+    proof_options: String,
+    key: String,
+    context_map: String,
+) -> Promise {
+    map_async_jsvalue(issue_presentation(
+        presentation,
+        proof_options,
+        key,
+        context_map,
+    ))
 }
 
 async fn prepare_issue_presentation(
@@ -508,11 +544,18 @@ pub fn completeIssuePresentation(
         not(feature = "verify")
     )
 ))]
-async fn verify_presentation(vp_string: String, proof_options: String) -> Result<String, Error> {
+async fn verify_presentation(
+    vp_string: String,
+    proof_options: String,
+    context_map: String,
+) -> Result<String, Error> {
     let options: JWTOrLDPOptions = serde_json::from_str(&proof_options)?;
+    let context_map: HashMap<String, String> = serde_json::from_str(&context_map)?;
     let proof_format = options.proof_format.unwrap_or_default();
     let resolver = DID_METHODS.to_resolver();
-    let mut context_loader = ssi::jsonld::ContextLoader::default();
+    let mut context_loader = ssi::jsonld::ContextLoader::default()
+        .with_context_map_from(context_map)
+        .unwrap();
     let result = match proof_format {
         ProofFormat::JWT => {
             VerifiablePresentation::verify_jwt(
@@ -545,8 +588,8 @@ async fn verify_presentation(vp_string: String, proof_options: String) -> Result
         not(feature = "verify")
     )
 ))]
-pub fn verifyPresentation(vp: String, proof_options: String) -> Promise {
-    map_async_jsvalue(verify_presentation(vp, proof_options))
+pub fn verifyPresentation(vp: String, proof_options: String, context_map: String) -> Promise {
+    map_async_jsvalue(verify_presentation(vp, proof_options, context_map))
 }
 
 #[cfg(any(
@@ -558,14 +601,22 @@ pub fn verifyPresentation(vp: String, proof_options: String) -> Promise {
         not(feature = "verify")
     )
 ))]
-async fn did_auth(holder: String, proof_options: String, key: String) -> Result<String, Error> {
+async fn did_auth(
+    holder: String,
+    proof_options: String,
+    key: String,
+    context_map: String,
+) -> Result<String, Error> {
     let mut presentation = VerifiablePresentation::default();
     presentation.holder = Some(ssi::vc::URI::String(holder));
     let key: JWK = serde_json::from_str(&key)?;
     let options: JWTOrLDPOptions = serde_json::from_str(&proof_options)?;
+    let context_map: HashMap<String, String> = serde_json::from_str(&context_map)?;
     let proof_format = options.proof_format.unwrap_or_default();
     let resolver = DID_METHODS.to_resolver();
-    let mut context_loader = ssi::jsonld::ContextLoader::default();
+    let mut context_loader = ssi::jsonld::ContextLoader::default()
+        .with_context_map_from(context_map)
+        .unwrap();
     let vp_string = match proof_format {
         ProofFormat::JWT => {
             presentation
@@ -595,8 +646,18 @@ async fn did_auth(holder: String, proof_options: String, key: String) -> Result<
         not(feature = "verify")
     )
 ))]
-pub fn DIDAuth(holder: String, linked_data_proof_options: String, key: String) -> Promise {
-    map_async_jsvalue(did_auth(holder, linked_data_proof_options, key))
+pub fn DIDAuth(
+    holder: String,
+    linked_data_proof_options: String,
+    key: String,
+    context_map: String,
+) -> Promise {
+    map_async_jsvalue(did_auth(
+        holder,
+        linked_data_proof_options,
+        key,
+        context_map,
+    ))
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -908,9 +969,15 @@ pub fn verifyInvocation(invocation: String, delegation: String) -> Promise {
 async fn context_loader(url: String) -> Result<String, Error> {
     let mut context_loader = ssi::jsonld::ContextLoader::default();
 
-    let iri = IriBuf::new(&url).unwrap_throw();
+    let iri = match IriBuf::new(&url) {
+        Ok(iri) => iri,
+        _ => return Ok("".to_string()),
+    };
 
-    let context = context_loader.load(iri).await.unwrap_throw();
+    let context = match context_loader.load(iri).await {
+        Ok(context) => context,
+        _ => return Ok("".to_string()),
+    };
 
     let json = context.document().compact_print().to_string();
 
