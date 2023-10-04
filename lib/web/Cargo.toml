@@ -18,7 +18,7 @@ iref = "^2.0.3"
 [dependencies.didkit]
 path = "../"
 default-features = false
-features = ["ed25519", "rsa", "ripemd-160", "eip", "tezos"]
+features = ["ed25519", "rsa", "ripemd-160", "eip", "tezos", "secp256r1"]
 
 [dependencies.did-ethr]
 path = "../../../ssi/did-ethr"
