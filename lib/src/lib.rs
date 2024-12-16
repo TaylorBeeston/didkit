@@ -42,6 +42,8 @@ pub use ssi::vc::VerificationResult;
 pub use ssi::vc::URI;
 pub use ssi::zcap::{Delegation, Invocation};
 
+pub use did_web::DIDWeb;
+
 use core::str::FromStr;
 use serde::{Deserialize, Serialize};
 

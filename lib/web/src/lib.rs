@@ -15,6 +15,7 @@ use didkit::error::Error;
 use didkit::error::{didkit_error_code, didkit_error_message};
 use didkit::get_verification_method;
 use didkit::ssi::{self, ldp::ProofSuite};
+use didkit::DIDWeb;
 use didkit::LinkedDataProofOptions;
 use didkit::ProofPreparation;
 use didkit::Source;
@@ -49,6 +50,18 @@ fn map_async_jsvalue<E: std::error::Error>(
 #[allow(non_snake_case)]
 pub fn getVersion() -> String {
     VERSION.into()
+}
+
+async fn clear_cache() -> Result<JsValue, JsValue> {
+    DIDWeb::clear_cache().await;
+
+    Ok("Cleared".into())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn clearCache() -> Promise {
+    future_to_promise(clear_cache())
 }
 
 async fn did_resolver(did: String, input_metadata: String) -> Result<String, String> {
