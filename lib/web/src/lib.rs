@@ -1,9 +1,14 @@
+mod dag;
+mod jwe;
+
 use core::future::Future;
 use std::collections::HashMap;
 
+use dag::{decode_cleartext, prepare_cleartext};
 use didkit::ResolutionResult;
 use iref::*;
 use js_sys::Promise;
+use jwe::JWE;
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
@@ -179,6 +184,90 @@ fn generate_secp256k1_key_from_bytes(bytes: &[u8]) -> Result<String, Error> {
 #[cfg(feature = "generate")]
 pub fn generateSecp256k1KeyFromBytes(bytes: &[u8]) -> Result<String, JsValue> {
     map_jsvalue(generate_secp256k1_key_from_bytes(bytes))
+}
+
+async fn create_jwe(cleartext: String, recipients: Vec<String>) -> Result<String, Error> {
+    let jwe = JWE::encrypt(cleartext.as_bytes(), &recipients).await?;
+    let jwe_json = serde_json::to_string(&jwe)?;
+
+    Ok(jwe_json)
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn createJwe(cleartext: String, recipients: Vec<String>) -> Promise {
+    map_async_jsvalue(create_jwe(cleartext, recipients))
+}
+
+async fn decrypt_jwe(jwe: String, jwks: Vec<String>) -> Result<String, Error> {
+    let jwe: JWE = serde_json::from_str(&jwe)?;
+    let jwks: Vec<JWK> = jwks
+        .iter()
+        .map(|jwk| serde_json::from_str(jwk).unwrap())
+        .collect();
+
+    if let Some(value) = jwe
+        .decrypt(&jwks)
+        .map(|cleartext| String::from_utf8(cleartext).unwrap())
+    {
+        return Ok(value);
+    }
+
+    Ok(String::from(""))
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn decryptJwe(jwe: String, jwks: Vec<String>) -> Promise {
+    map_async_jsvalue(decrypt_jwe(jwe, jwks))
+}
+
+async fn create_dag_jwe(cleartext: JsValue, recipients: Vec<String>) -> Result<String, Error> {
+    let jwe = JWE::encrypt(
+        prepare_cleartext(&cleartext, None)
+            .await
+            .unwrap()
+            .as_slice(),
+        &recipients,
+    )
+    .await?;
+    let jwe_json = serde_json::to_string(&jwe)?;
+
+    Ok(jwe_json)
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn createDagJwe(cleartext: JsValue, recipients: Vec<String>) -> Promise {
+    map_async_jsvalue(create_dag_jwe(cleartext, recipients))
+}
+
+async fn decrypt_dag_jwe(jwe: String, jwks: Vec<String>) -> Result<JsValue, Error> {
+    let jwe: JWE = serde_json::from_str(&jwe)?;
+    let jwks: Vec<JWK> = jwks
+        .iter()
+        .map(|jwk| serde_json::from_str(jwk).unwrap())
+        .collect();
+
+    if let Some(value) = jwe
+        .decrypt(&jwks)
+        .map(|cleartext| decode_cleartext(cleartext.as_slice()).unwrap())
+    {
+        return Ok(value);
+    }
+
+    Ok(JsValue::from_str(""))
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn decryptDagJwe(jwe: String, jwks: Vec<String>) -> Promise {
+    future_to_promise(async {
+        match decrypt_dag_jwe(jwe, jwks).await {
+            Ok(value) => Ok(value),
+            Err(err) => Err(err.to_string().into()),
+        }
+    })
 }
 
 fn key_to_did(method_pattern: String, jwk: String) -> Result<String, Error> {
