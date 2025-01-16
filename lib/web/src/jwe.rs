@@ -104,67 +104,70 @@ impl JWE {
             let doc = doc.ok_or(Error::UnableToGetVerificationMethod)?;
 
             // Get key agreement key
-            let key_agreement = doc
+            let key_agreements = doc
                 .key_agreement
                 .as_ref()
-                .and_then(|ka| ka.first())
                 .ok_or(Error::UnableToGetVerificationMethod)?;
 
-            let receiver_public_bytes = match &key_agreement {
-                didkit::ssi::did::VerificationMethod::Map(vm) => {
-                    bs58::decode(&vm.public_key_base58.clone().unwrap())
-                        .into_vec()
-                        .unwrap()
-                }
-                _ => return Err(Error::UnableToGetVerificationMethod),
-            };
+            for key_agreement in key_agreements {
+                let receiver_public_bytes = match &key_agreement {
+                    didkit::ssi::did::VerificationMethod::Map(vm) => {
+                        bs58::decode(&vm.public_key_base58.clone().unwrap())
+                            .into_vec()
+                            .unwrap()
+                    }
+                    _ => return Err(Error::UnableToGetVerificationMethod),
+                };
 
-            let receiver_mont =
-                X25519Public::from(<[u8; 32]>::try_from(receiver_public_bytes.as_slice()).unwrap());
+                let receiver_mont = X25519Public::from(
+                    <[u8; 32]>::try_from(receiver_public_bytes.as_slice()).unwrap(),
+                );
 
-            let mut recipient_iv = [0u8; 24]; // Updated to 24 bytes
-            rng.fill_bytes(&mut recipient_iv);
+                let mut recipient_iv = [0u8; 24]; // Updated to 24 bytes
+                rng.fill_bytes(&mut recipient_iv);
 
-            let ephemeral_secret = StaticSecret::from([0u8; 32]);
-            let ephemeral_public = X25519Public::from(&ephemeral_secret);
+                let ephemeral_secret = StaticSecret::from([0u8; 32]);
+                let ephemeral_public = X25519Public::from(&ephemeral_secret);
 
-            let shared_secret = ephemeral_secret.diffie_hellman(&receiver_mont);
+                let shared_secret = ephemeral_secret.diffie_hellman(&receiver_mont);
 
-            let kek = concat_kdf(
-                shared_secret.as_bytes(),
-                256,
-                "ECDH-ES+XC20PKW",
-                None, // apu (producer info)
-            );
+                let kek = concat_kdf(
+                    shared_secret.as_bytes(),
+                    256,
+                    "ECDH-ES+XC20PKW",
+                    None, // apu (producer info)
+                );
 
-            // Encrypt CEK for this recipient
-            let cipher = XChaCha20Poly1305::new_from_slice(&kek)
-                .map_err(|_| Error::JWK(didkit::ssi::jwk::Error::InvalidKeyLength(kek.len())))?;
+                // Encrypt CEK for this recipient
+                let cipher = XChaCha20Poly1305::new_from_slice(&kek).map_err(|_| {
+                    Error::JWK(didkit::ssi::jwk::Error::InvalidKeyLength(kek.len()))
+                })?;
 
-            let nonce = XNonce::from_slice(&recipient_iv);
-            let mut encrypted_key = cipher
-                .encrypt(nonce, &cek[..])
-                .map_err(|_| Error::UnableToGenerateDID)?;
+                let nonce = XNonce::from_slice(&recipient_iv);
+                let mut encrypted_key = cipher
+                    .encrypt(nonce, &cek[..])
+                    .map_err(|_| Error::UnableToGenerateDID)?;
 
-            let tag = encrypted_key.split_off(encrypted_key.len() - 16);
+                let tag = encrypted_key.split_off(encrypted_key.len() - 16);
 
-            // Create recipient header
-            let header = RecipientHeader {
-                alg: "ECDH-ES+XC20PKW".to_string(),
-                iv: URL_SAFE_NO_PAD.encode(&recipient_iv),
-                tag: URL_SAFE_NO_PAD.encode(&tag), // Store the tag separately
-                epk: EphemeralPublicKey {
-                    kty: "OKP".to_string(),
-                    crv: "X25519".to_string(),
-                    x: URL_SAFE_NO_PAD.encode(ephemeral_public.as_bytes()),
-                },
-                kid: key_agreement.get_id(&recipient_did).to_string(),
-            };
+                // Create recipient header
+                let header = RecipientHeader {
+                    alg: "ECDH-ES+XC20PKW".to_string(),
+                    iv: URL_SAFE_NO_PAD.encode(&recipient_iv),
+                    tag: URL_SAFE_NO_PAD.encode(&tag), // Store the tag separately
+                    epk: EphemeralPublicKey {
+                        kty: "OKP".to_string(),
+                        crv: "X25519".to_string(),
+                        x: URL_SAFE_NO_PAD.encode(ephemeral_public.as_bytes()),
+                    },
+                    kid: key_agreement.get_id(&recipient_did).to_string(),
+                };
 
-            recipient_infos.push(RecipientInfo {
-                encrypted_key: URL_SAFE_NO_PAD.encode(encrypted_key),
-                header,
-            });
+                recipient_infos.push(RecipientInfo {
+                    encrypted_key: URL_SAFE_NO_PAD.encode(encrypted_key),
+                    header,
+                });
+            }
         }
 
         let cipher = XChaCha20Poly1305::new_from_slice(&cek)
